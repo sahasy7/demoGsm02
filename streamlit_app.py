@@ -1,9 +1,8 @@
 import streamlit as st
 import openai
 import qdrant_client
+import os
 from langchain.vectorstores import Qdrant
-from langchain_community.document_loaders import PyPDFLoader
-from llama_index.core import SimpleDirectoryReader
 
 # used to create the memory
 from langchain.memory import ConversationBufferMemory
@@ -15,6 +14,7 @@ from langchain.document_loaders import WebBaseLoader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import FAISS
 from langchain.embeddings import OpenAIEmbeddings
+from langchain.embeddings.cohere import CohereEmbeddings
 
 # used to create the retrieval tool
 from langchain.agents import tool
@@ -34,6 +34,7 @@ from langchain.agents import AgentExecutor
 openai_api_key = st.secrets.openai_key
 QDRANT_HOST = st.secrets.QDRANT_HOST
 QDRANT_API_KEY = st.secrets.QDRANT_API_KEY
+os.environ["COHERE_API_KEY"] = st.secrets.COHERE_API_KEY
 
 # add a heading for your app.
 st.header("Chat with the GSM mall ")
@@ -55,13 +56,18 @@ if "messages" not in st.session_state.keys():
 @st.cache_resource(show_spinner=False)
 def load_data():
     with st.spinner(text="Loading and indexing the LLM blog – hang tight!."):
-        reader = SimpleDirectoryReader(input_dir="./data", recursive=True)
-        documents = reader.load_data()
-        text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-        texts = text_splitter.split_documents(documents)
-        embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
-        db = FAISS.from_documents(texts, embeddings)
-        return db
+    client = qdrant_client.QdrantClient(
+        url=QDRANT_HOST,
+        api_key=QDRANT_API_KEY,
+    )
+    embeddings = CohereEmbeddings(model="embed-english-v2.0")
+    vector_store = Qdrant(
+        client = client,
+        collection_name = "gsm_demo02",
+        embeddings = embeddings
+    )
+    print("connection established !")
+    return db
 
 db = load_data()
 
