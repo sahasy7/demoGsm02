@@ -1,9 +1,10 @@
 import streamlit as st
 import openai
+import qdrant_client
+from langchain.vectorstores import Qdrant
 
 # used to create the memory
 from langchain.memory import ConversationBufferMemory
-from langchain_community.document_loaders import Docx2txtLoader
 
 # used to load text
 from langchain.document_loaders import WebBaseLoader
@@ -29,6 +30,8 @@ from langchain.agents import AgentExecutor
 
 # set the secure key
 openai_api_key = st.secrets.openai_key
+QDRANT_HOST = st.secrets.QDRANT_HOST
+QDRANT_API_KEY = st.secrets.QDRANT_API_KEY
 
 # add a heading for your app.
 st.header("Chat with the GSM mall ")
@@ -50,18 +53,26 @@ if "messages" not in st.session_state.keys():
 @st.cache_resource(show_spinner=False)
 def load_data():
     with st.spinner(text="Loading and indexing the LLM blog – hang tight!."):
-        loader = Docx2txtLoader("data/GSM Mall Update Q&A.docx")
-        data = loader.load()
-        text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-        texts = text_splitter.split_documents(data)
+        client = qdrant_client.QdrantClient(
+            url=QDRANT_HOST,
+            api_key=QDRANT_API_KEY,
+        )
+
         embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
-        db = FAISS.from_documents(texts, embeddings)
+
+        vector_store = Qdrant(
+            client=client,
+            collection_name="my_documents",
+            embeddings=embeddings
+        )
+
+        db = vector_store
         return db
 
 db = load_data()
 
 # instantiate the database retriever
-retriever = db.as_retriever()
+retriever = db.as_retriever(search_type="mmr")
 
 # define the retriever tool
 @tool
