@@ -5,3 +5,4 @@ bs4
 tiktoken
 faiss-cpu
 docx2txt
+qdrant-client==1.5.0
