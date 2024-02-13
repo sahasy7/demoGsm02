@@ -54,10 +54,10 @@ if "messages" not in st.session_state.keys():
 @st.cache_resource(show_spinner=False)
 def load_data():
     with st.spinner(text="Loading and indexing the LLM blog – hang tight!."):
-        loader = PyPDFLoader("example_data/layout-parser-paper.pdf")
+        loader = PyPDFLoader("data/GSM Mall Update Q&A.pdf")
         pages = loader.load_and_split()
         text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-        texts = text_splitter.split_documents(data)
+        texts = text_splitter.split_documents(pages)
         embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
         db = FAISS.from_documents(texts, embeddings)
         return db
