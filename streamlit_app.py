@@ -56,18 +56,18 @@ if "messages" not in st.session_state.keys():
 @st.cache_resource(show_spinner=False)
 def load_data():
     with st.spinner(text="Loading and indexing the LLM blog – hang tight!."):
-    client = qdrant_client.QdrantClient(
-        url=QDRANT_HOST,
-        api_key=QDRANT_API_KEY,
-    )
-    embeddings = CohereEmbeddings(model="embed-english-v2.0")
-    vector_store = Qdrant(
-        client = client,
-        collection_name = "gsm_demo02",
-        embeddings = embeddings
-    )
-    print("connection established !")
-    return db
+        client = qdrant_client.QdrantClient(
+            url=QDRANT_HOST,
+            api_key=QDRANT_API_KEY,
+        )
+        embeddings = CohereEmbeddings(model="embed-english-v2.0")
+        vector_store = Qdrant(
+            client=client,
+            collection_name="gsm_demo02",
+            embeddings=embeddings
+        )
+        print("connection established !")
+        return vector_store 
 
 db = load_data()
 
