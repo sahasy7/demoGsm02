@@ -50,7 +50,7 @@ if "messages" not in st.session_state.keys():
 @st.cache_resource(show_spinner=False)
 def load_data():
     with st.spinner(text="Loading and indexing the LLM blog – hang tight!."):
-        loader = Docx2txtLoader("example_data/fake.docx")
+        loader = Docx2txtLoader("data/GSM Mall Update Q&A.docx")
         data = loader.load()
         text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         texts = text_splitter.split_documents(data)
@@ -75,9 +75,7 @@ tools = [tool]
 # define the prompt
 system_message = SystemMessage(
         content=(
-            "Do your best to answer the questions. "
-            "Feel free to use any tools available to look up "
-            "relevant information, only if neccessary"
+            "Your friendly assistant is here to help! Remember, always provide clear, concise, and friendly responses within 10-15 words. value User time and aim to provide clear and concise responses. Maintain a positive and professional tone. Encourage users to visit the store subtly, without being pushy. Dont hallucinate. Let's make every interaction a delightful experience! 😊"
         )
 )
 prompt_template = OpenAIFunctionsAgent.create_prompt(
