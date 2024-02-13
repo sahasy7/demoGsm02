@@ -2,6 +2,7 @@ import streamlit as st
 import openai
 import qdrant_client
 from langchain.vectorstores import Qdrant
+from langchain_community.document_loaders import PyPDFLoader
 
 # used to create the memory
 from langchain.memory import ConversationBufferMemory
@@ -53,23 +54,16 @@ if "messages" not in st.session_state.keys():
 @st.cache_resource(show_spinner=False)
 def load_data():
     with st.spinner(text="Loading and indexing the LLM blog – hang tight!."):
-        client = qdrant_client.QdrantClient(
-            url=QDRANT_HOST,
-            api_key=QDRANT_API_KEY,
-        )
-
+        loader = PyPDFLoader("example_data/layout-parser-paper.pdf")
+        pages = loader.load_and_split()
+        text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        texts = text_splitter.split_documents(data)
         embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
-
-        vector_store = Qdrant(
-            client=client,
-            collection_name="my_documents",
-            embeddings=embeddings
-        )
-
-        db = vector_store
+        db = FAISS.from_documents(texts, embeddings)
         return db
 
 db = load_data()
+
 
 # instantiate the database retriever
 retriever = db.as_retriever(search_type="mmr")
