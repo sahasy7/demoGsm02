@@ -3,6 +3,7 @@ import openai
 import qdrant_client
 from langchain.vectorstores import Qdrant
 from langchain_community.document_loaders import PyPDFLoader
+from llama_index.core import SimpleDirectoryReader
 
 # used to create the memory
 from langchain.memory import ConversationBufferMemory
@@ -54,10 +55,10 @@ if "messages" not in st.session_state.keys():
 @st.cache_resource(show_spinner=False)
 def load_data():
     with st.spinner(text="Loading and indexing the LLM blog – hang tight!."):
-        loader = PyPDFLoader("data/GSM Mall Update Q&A.pdf")
-        pages = loader.load_and_split()
+        reader = SimpleDirectoryReader(input_dir="path/to/directory")
+        documents = reader.load_data()
         text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-        texts = text_splitter.split_documents(pages)
+        texts = text_splitter.split_documents(documents)
         embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
         db = FAISS.from_documents(texts, embeddings)
         return db
