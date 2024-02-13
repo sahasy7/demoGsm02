@@ -1,51 +1,111 @@
 import streamlit as st
-from llama_index.core import VectorStoreIndex, ServiceContext, Document
-from llama_index.core import (
-    VectorStoreIndex,
-    SimpleDirectoryReader,
-    StorageContext,
-    Document
-)
-
-from llama_index.llms import OpenAI
 import openai
-from llama_index.core import SimpleDirectoryReader
 
-st.set_page_config(page_title="Chat with the GSM mall", page_icon="🏬", layout="centered", initial_sidebar_state="auto", menu_items=None)
-openai.api_key = st.secrets.openai_key
-st.title("Welcome To GSM infoBot")
+# used to create the memory
+from langchain.memory import ConversationBufferMemory
+from langchain_community.document_loaders import Docx2txtLoader
 
-if "messages" not in st.session_state.keys(): # Initialize the chat messages history
+# used to load text
+from langchain.document_loaders import WebBaseLoader
+
+# used to create the retriever
+from langchain.text_splitter import CharacterTextSplitter
+from langchain.vectorstores import FAISS
+from langchain.embeddings import OpenAIEmbeddings
+
+# used to create the retrieval tool
+from langchain.agents import tool
+
+# used to create the prompt template
+from langchain.agents.openai_functions_agent.base import OpenAIFunctionsAgent
+from langchain.schema import SystemMessage
+from langchain.prompts import MessagesPlaceholder
+
+
+# used to create the agent executor
+from langchain.chat_models import ChatOpenAI
+from langchain.agents import AgentExecutor
+
+
+# set the secure key
+openai_api_key = st.secrets.openai_key
+
+# add a heading for your app.
+st.header("Chat with the GSM mall ")
+
+# Initialize the memory
+# This is needed for both the memory and the prompt
+memory_key = "history"
+
+if "memory" not in st.session_state.keys():
+    st.session_state.memory = ConversationBufferMemory(memory_key=memory_key, return_messages=True)
+
+# Initialize the chat message history
+if "messages" not in st.session_state.keys():
     st.session_state.messages = [
         {"role": "assistant", "content": "Need Info? Ask Me Questions about GSM Mall's Features"}
     ]
 
+# create the document database
 @st.cache_resource(show_spinner=False)
 def load_data():
-    with st.spinner(text="Loading and indexing the Streamlit docs – hang tight! This should take 1-2 minutes."):
-        reader = SimpleDirectoryReader(input_dir="./data", recursive=True)
-        docs = reader.load_data()
-        service_context = ServiceContext.from_defaults(llm=OpenAI(model="gpt-3.5-turbo", temperature=0.5, system_prompt= "Your friendly assistant is here to help! Remember, always provide clear, concise, and friendly responses within 10-15 words. value User time and aim to provide clear and concise responses. Maintain a positive and professional tone. Encourage users to visit the store subtly, without being pushy. Dont hallucinate. Let's make every interaction a delightful experience! 😊"))
-        index = VectorStoreIndex.from_documents(docs, service_context=service_context)
-        return index
+    with st.spinner(text="Loading and indexing the LLM blog – hang tight!."):
+        loader = Docx2txtLoader("example_data/fake.docx")
+        data = loader.load()
+        text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        texts = text_splitter.split_documents(data)
+        embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+        db = FAISS.from_documents(texts, embeddings)
+        return db
 
-index = load_data()
+db = load_data()
 
-if "chat_engine" not in st.session_state.keys(): # Initialize the chat engine
-        st.session_state.chat_engine = index.as_chat_engine(chat_mode="condense_question", verbose=True)
+# instantiate the database retriever
+retriever = db.as_retriever()
 
-if prompt := st.chat_input("Your question"): # Prompt for user input and save to chat history
+# define the retriever tool
+@tool
+def tool(query):
+    "Searches and returns documents regarding the llm powered autonomous agents blog"
+    docs = retriever.get_relevant_documents(query)
+    return docs
+
+tools = [tool]
+
+# define the prompt
+system_message = SystemMessage(
+        content=(
+            "Do your best to answer the questions. "
+            "Feel free to use any tools available to look up "
+            "relevant information, only if neccessary"
+        )
+)
+prompt_template = OpenAIFunctionsAgent.create_prompt(
+        system_message=system_message,
+        extra_prompt_messages=[MessagesPlaceholder(variable_name=memory_key)]
+    )
+
+# instantiate the large language model
+llm = ChatOpenAI(temperature = 0, openai_api_key=openai_api_key)
+
+# instantiate agent
+agent = OpenAIFunctionsAgent(llm=llm, tools=tools, prompt=prompt_template)
+agent_executor = AgentExecutor(agent=agent, tools=tools, memory=st.session_state.memory, verbose=True)
+
+# Prompt for user input and display message history
+if prompt := st.chat_input("Your LLM based agent related question"): # Prompt for user input and save to chat history
     st.session_state.messages.append({"role": "user", "content": prompt})
 
 for message in st.session_state.messages: # Display the prior chat messages
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
+# Pass query to chat engine and display response
 # If last message is not from assistant, generate a new response
 if st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            response = st.session_state.chat_engine.chat(prompt)
-            st.write(response.response)
-            message = {"role": "assistant", "content": response.response}
+            response = agent_executor({"input": prompt})
+            st.write(response["output"])
+            message = {"role": "assistant", "content": response["output"]}
             st.session_state.messages.append(message) # Add response to message history
