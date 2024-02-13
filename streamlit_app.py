@@ -11,9 +11,6 @@ from langchain.memory import ConversationBufferMemory
 from langchain.document_loaders import WebBaseLoader
 
 # used to create the retriever
-from langchain.text_splitter import CharacterTextSplitter
-from langchain.vectorstores import FAISS
-from langchain.embeddings import OpenAIEmbeddings
 from langchain.embeddings.cohere import CohereEmbeddings
 
 # used to create the retrieval tool
