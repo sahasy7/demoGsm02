@@ -1,6 +1,7 @@
 streamlit
 openai
 llama-index
+llama-index-core
 langchain
 bs4
 tiktoken
