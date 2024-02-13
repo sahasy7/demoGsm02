@@ -55,7 +55,7 @@ if "messages" not in st.session_state.keys():
 @st.cache_resource(show_spinner=False)
 def load_data():
     with st.spinner(text="Loading and indexing the LLM blog – hang tight!."):
-        reader = SimpleDirectoryReader(input_dir="path/to/directory")
+        reader = SimpleDirectoryReader(input_dir="./data")
         documents = reader.load_data()
         text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         texts = text_splitter.split_documents(documents)
