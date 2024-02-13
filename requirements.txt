@@ -1,8 +1,7 @@
 streamlit
 openai
-llama-index
-nltk
-pypdf
+langchain
+bs4
+tiktoken
+faiss-cpu
 docx2txt
-pathlib
-
